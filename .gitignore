@@ -1,0 +1,16 @@
+# Nix build artifacts
+result
+result-*
+plugins/*/result
+plugins/*/result-*
+
+# lgx build outputs
+*.lgx
+logos-*-module-lgx-*/
+logos-*-module.lgx/
+
+# logs
+logs/
+
+# OS
+.DS_Store
