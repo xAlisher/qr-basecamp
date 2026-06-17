@@ -38,3 +38,23 @@ rm -rf ~/.cache/Logos/LogosBasecamp/qmlcache/      # stale cache → "Type unava
   reset needed — `lgx-portable` writes `linux-amd64` directly.
 - Verifying a visual feature: `grim`/`scrot` capture **black** under this Wayland
   compositor (no `wlr-screencopy`); `gnome-screenshot -f` works via the portal.
+
+## Chat ID integration (qr_ui ← chat_id_showcase)
+
+`qr_ui` receives a Chat ID (intro bundle) from another module and renders its QR. It is a
+**pure push receiver** (v0.5.1): it only `logos.onModuleEvent("chat_id_showcase",
+"chatCreateIntroBundleResult")` and draws the QR when the event arrives. The companion
+[`chat-id-showcase`](https://github.com/xAlisher/chat-id-showcase) core+ui pushes the ID via
+`setIntroBundle` + `createIntroBundle`.
+
+Three hard-won rules (each cost a debug cycle — all now platform skills):
+- **Core emit:** `emit eventResponse(...)` **directly**. The first version used
+  `logosAPI->getClient("chat_id_showcase")->onEventResponse(this,…)` → `std::bad_alloc`
+  crash the instant `createIntroBundle` was called. (skill: `core-emit-eventresponse-directly`)
+- **Never touch an absent module from QML.** `qr_ui` used to also `callModule`/`onModuleEvent`
+  on `chat_module` (not installed) → each blocked the **full ~20s IPC timeout** → load spinner.
+  `onModuleEvent` is *not* free for missing modules. (skill: `qml-ipc-only-installed-modules`)
+- **No blocking IPC in `Component.onCompleted`.** A sync call there freezes the first frame
+  while the core cold-spawns. Pure push (subscribe only) avoids it entirely.
+- Debugging: **`logoscore` headless** (`-c "chat_id_showcase.createIntroBundle()"`) reproduced
+  the core crash in seconds and let me bisect emit-removed → direct-emit without GUI cycles.
