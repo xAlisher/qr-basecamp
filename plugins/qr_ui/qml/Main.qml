@@ -21,6 +21,43 @@ Item {
     property var    qrCells: []     // flat row-major array of booleans, length N*N
     property string errorMsg: ""
 
+    // ── Chat ID (intro bundle) — pure receiver ────────────────────────────
+    // Source that PUSHES a Chat ID via the createIntroBundle/chatCreateIntroBundleResult
+    // contract. Only subscribe to modules that are actually installed: onModuleEvent has to
+    // connect to the module's source, so subscribing to an ABSENT module blocks the full
+    // ~20s IPC timeout. (To also receive the real chat_module, add it here only when it ships.)
+    readonly property var chatSources: ["chat_id_showcase"]
+
+    Component.onCompleted: subscribeTimer.start()
+
+    // Defer subscription off onCompleted so the view paints immediately — onModuleEvent can
+    // block briefly while the core's source comes up.
+    Timer {
+        id: subscribeTimer
+        interval: 200
+        repeat: false
+        onTriggered: {
+            if (typeof logos === "undefined") return
+            for (var i = 0; i < chatSources.length; i++)
+                logos.onModuleEvent(chatSources[i], "chatCreateIntroBundleResult")
+        }
+    }
+
+    // chatCreateIntroBundleResult payload: [bool success, int status, QString bundle, QString ts]
+    Connections {
+        target: typeof logos !== "undefined" ? logos : null
+        function onModuleEventReceived(moduleName, eventName, data) {
+            if (eventName !== "chatCreateIntroBundleResult") return
+            if (root.chatSources.indexOf(moduleName) < 0) return
+            var success = data && (data[0] === true || data[0] === "true")
+            var bundle  = data ? (data[2] || "") : ""
+            if (success && bundle.length > 0) {
+                input.text = bundle           // input shows the Chat ID
+                root.generate(bundle)         // generate the QR
+            }
+        }
+    }
+
     // Build the QR module matrix from `text`. Returns true on success.
     function generate(text) {
         errorMsg = ""

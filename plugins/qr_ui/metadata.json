@@ -1,9 +1,9 @@
 {
   "name": "qr_ui",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "type": "ui_qml",
   "category": "tools",
-  "description": "Generate a QR code from any text input",
+  "description": "Generate a QR code from any text input, or from your chat Intro Bundle",
   "view": "qml/Main.qml",
   "icon": "qml/icons/icon.png",
   "dependencies": [],
