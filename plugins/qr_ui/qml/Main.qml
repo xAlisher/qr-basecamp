@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import "qrcode.js" as QR
 
 Item {
     id: root
@@ -58,7 +57,9 @@ Item {
         }
     }
 
-    // Build the QR module matrix from `text`. Returns true on success.
+    // Build the QR matrix by calling the shared `qr` core service. Returns true on success.
+    // (Synchronous callModule — fine on the user-initiated Generate; the qr core is light and
+    // spawns fast. The core is the single encoder; we just render its matrix.)
     function generate(text) {
         errorMsg = ""
         qrSize = 0
@@ -67,22 +68,28 @@ Item {
             errorMsg = "Enter some text first."
             return false
         }
-        try {
-            var qr = QR.qrcode(0, 'M')   // type 0 = auto-fit, ECC level M
-            qr.addData(text)
-            qr.make()
-            var n = qr.getModuleCount()
-            var cells = new Array(n * n)
-            for (var r = 0; r < n; r++)
-                for (var c = 0; c < n; c++)
-                    cells[r * n + c] = qr.isDark(r, c)
-            qrSize = n
-            qrCells = cells
-            return true
-        } catch (e) {
-            errorMsg = "Could not encode: " + (e.message || e) + " (input may be too long)."
+        if (typeof logos === "undefined") {
+            errorMsg = "Module bridge unavailable (standalone preview)."
             return false
         }
+        var res = callModuleParse(logos.callModule("qr", "generate", [text]))
+        if (!res || !res.ok) {
+            errorMsg = (res && res.error) ? res.error
+                     : "QR service unavailable — is the 'qr' module installed?"
+            return false
+        }
+        qrSize = res.n
+        qrCells = res.cells          // flat row-major bool array, length n*n
+        return true
+    }
+
+    // logos.callModule returns a double-JSON-encoded string; unwrap to an object.
+    function callModuleParse(raw) {
+        try {
+            var v = JSON.parse(raw)
+            if (typeof v === "string") v = JSON.parse(v)
+            return v
+        } catch (e) { return null }
     }
 
     Rectangle {

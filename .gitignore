@@ -9,6 +9,10 @@ plugins/*/result-*
 logos-*-module-lgx-*/
 logos-*-module.lgx/
 
+# C++ build (core)
+build/
+cmake/
+
 # logs
 logs/
 

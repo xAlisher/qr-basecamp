@@ -1,0 +1,29 @@
+{
+  "name": "qr",
+  "version": "0.1.0",
+  "type": "core",
+  "category": "tools",
+  "description": "QR code generator service — any module can request a QR matrix for arbitrary text",
+  "main": "qr_plugin",
+  "icon": "",
+  "dependencies": [],
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": ["Qt6 COMPONENTS Core Qml"],
+      "extra_sources": [
+        "src/QrPlugin.cpp",
+        "src/qrcodegen.cpp"
+      ],
+      "extra_include_dirs": [
+        "src"
+      ],
+      "extra_link_libraries": []
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "IID": "org.logos.QrInterface",
+  "author": "xAlisher",
+  "category": "tools",
+  "dependencies": [],
+  "description": "QR code generator service — returns a QR matrix for arbitrary text",
+  "main": "qr_plugin",
+  "name": "qr",
+  "type": "core",
+  "version": "0.1.0"
+}
