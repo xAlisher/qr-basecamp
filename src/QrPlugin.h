@@ -32,6 +32,11 @@ public:
     // The last generated QR (same JSON shape), or {"ok":false,"error":"none generated"}.
     Q_INVOKABLE QString getLast();
 
+    // Validate the PNG at `srcPath` (e.g. a QML grabToImage temp file) and move it into the
+    // user's Pictures/qr dir as <name>.png. File I/O is C++-only (QML sandbox). Removes the
+    // source on success. Returns {"ok":true,"path":...} or {"ok":false,"error":...}.
+    Q_INVOKABLE QString savePng(const QString& srcPath, const QString& name);
+
 signals:
     // Required — ModuleProxy connects to this on load (eventresponse-signal-required).
     void eventResponse(const QString& eventName, const QVariantList& data);

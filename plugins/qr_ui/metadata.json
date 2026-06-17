@@ -1,6 +1,6 @@
 {
   "name": "qr_ui",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "ui_qml",
   "category": "tools",
   "description": "Generate a QR code from any text input (via the shared qr service), or from a chat Intro Bundle",

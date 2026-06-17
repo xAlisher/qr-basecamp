@@ -13,12 +13,34 @@ Item {
     readonly property color textMuted:     "#5D5D5D"
     readonly property color accentOrange:  "#FF5000"
     readonly property color errorRed:      "#FB3748"
+    readonly property color successGreen:  "#22C55E"
     readonly property color borderColor:   "#383838"
 
     // ── QR state ──────────────────────────────────────────────────────────
     property int    qrSize:  0      // module count (N) of the rendered matrix
     property var    qrCells: []     // flat row-major array of booleans, length N*N
     property string errorMsg: ""
+    property string saveMsg:  ""
+    property bool   saveOk:   false
+
+    // Save the rendered QR as a PNG. Grabs the on-screen frame to a temp file (QML side),
+    // then hands it to the qr core's savePng to validate + move into place (file I/O is
+    // C++-only). Mirrors ia-basecamp's grabToImage → saveToFile → finalize pattern.
+    function saveImage() {
+        saveMsg = ""
+        if (qrSize <= 0) return
+        if (typeof logos === "undefined") { saveOk = false; saveMsg = "Bridge unavailable."; return }
+        var name = "qr-" + Qt.formatDateTime(new Date(), "yyyyMMdd-hhmmss")
+        var tmp = "/tmp/" + name + ".png"
+        qrFrame.grabToImage(function(result) {
+            if (!result.saveToFile(tmp)) {
+                root.saveOk = false; root.saveMsg = "Could not capture the QR image."; return
+            }
+            var res = root.callModuleParse(logos.callModule("qr", "savePng", [tmp, name]))
+            if (res && res.ok) { root.saveOk = true;  root.saveMsg = "Saved: " + res.path }
+            else               { root.saveOk = false; root.saveMsg = "Save failed: " + (res && res.error ? res.error : "qr service unavailable") }
+        })
+    }
 
     // ── Chat ID (intro bundle) — pure receiver ────────────────────────────
     // Source that PUSHES a Chat ID via the createIntroBundle/chatCreateIntroBundleResult
@@ -172,24 +194,23 @@ Item {
             }
 
             // ── QR output ─────────────────────────────────────────────────
+            // Fixed white square; the matrix is CENTRED inside it (anchors.centerIn),
+            // so the quiet-zone margin is symmetric on all four sides.
             Rectangle {
                 id: qrFrame
                 visible: qrSize > 0
                 Layout.alignment: Qt.AlignHCenter
-                // white quiet-zone border around the matrix
-                readonly property int boxSize: 300
-                readonly property int cell: qrSize > 0 ? Math.floor(boxSize / qrSize) : 1
-                readonly property int matrix: cell * qrSize
-                readonly property int quiet: cell * 4
-                width:  matrix + quiet * 2
-                height: matrix + quiet * 2
+                Layout.preferredWidth: 320
+                Layout.preferredHeight: 320
                 radius: 8
                 color: "#FFFFFF"
 
+                // Largest cell that leaves ≥16px quiet on each side.
+                readonly property int cell: qrSize > 0 ? Math.max(1, Math.floor((width - 32) / qrSize)) : 1
+
                 Grid {
                     id: grid
-                    x: qrFrame.quiet
-                    y: qrFrame.quiet
+                    anchors.centerIn: parent
                     columns: qrSize
                     rows: qrSize
                     Repeater {
@@ -201,6 +222,39 @@ Item {
                         }
                     }
                 }
+            }
+
+            // ── Save as image ─────────────────────────────────────────────
+            Button {
+                id: saveButton
+                text: "Save as image"
+                visible: qrSize > 0
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+                onClicked: root.saveImage()
+                contentItem: Text {
+                    text: saveButton.text
+                    color: textPrimary
+                    font.pixelSize: 14
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: Rectangle {
+                    radius: 8
+                    color: "transparent"
+                    border.color: saveButton.hovered ? accentOrange : borderColor
+                    border.width: 1
+                }
+            }
+
+            Label {
+                text: saveMsg
+                visible: saveMsg.length > 0
+                color: saveOk ? successGreen : errorRed
+                font.pixelSize: 12
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WrapAnywhere
             }
         }
     }
