@@ -1,6 +1,6 @@
 {
   "name": "qr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "core",
   "category": "tools",
   "description": "QR code generator service — any module can request a QR matrix for arbitrary text",

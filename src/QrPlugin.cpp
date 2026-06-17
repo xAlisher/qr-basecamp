@@ -18,6 +18,29 @@ namespace {
 QString jsonOut(const QJsonObject& o) {
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
+
+// Encode `data` to a QR matrix. On success sets ok/n/cells; on failure sets ok=false/error.
+// Shared by generate() and generateCard().
+QJsonObject encodeMatrix(const QString& data) {
+    QJsonObject r;
+    if (data.isEmpty()) {
+        r["ok"] = false; r["error"] = "empty input"; return r;
+    }
+    try {
+        const QByteArray utf8 = data.toUtf8();
+        const QrCode qr = QrCode::encodeText(utf8.constData(), QrCode::Ecc::MEDIUM);
+        const int n = qr.getSize();
+        QJsonArray cells;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                cells.append(qr.getModule(x, y));   // row-major
+        r["ok"] = true; r["n"] = n; r["cells"] = cells;
+    } catch (const std::exception& e) {
+        r["ok"] = false;
+        r["error"] = QString("encode failed (input may be too long): ") + e.what();
+    }
+    return r;
+}
 }
 
 QrPlugin::QrPlugin(QObject* parent)
@@ -35,29 +58,21 @@ void QrPlugin::initLogos(LogosAPI* api)
 
 QString QrPlugin::generate(const QString& text)
 {
-    QJsonObject result;
-    if (text.isEmpty()) {
-        result["ok"] = false;
-        result["error"] = "empty input";
-    } else {
-        try {
-            const QByteArray utf8 = text.toUtf8();
-            const QrCode qr = QrCode::encodeText(utf8.constData(), QrCode::Ecc::MEDIUM);
-            const int n = qr.getSize();
-            QJsonArray cells;
-            for (int y = 0; y < n; ++y)
-                for (int x = 0; x < n; ++x)
-                    cells.append(qr.getModule(x, y));   // row-major
-            result["ok"] = true;
-            result["n"] = n;
-            result["cells"] = cells;
-            result["text"] = text;
-        } catch (const std::exception& e) {
-            result["ok"] = false;
-            result["error"] = QString("encode failed (input may be too long): ") + e.what();
-        }
+    QJsonObject result = encodeMatrix(text);
+    if (result["ok"].toBool())
+        result["text"] = text;
+    m_lastJson = jsonOut(result);
+    return m_lastJson;
+}
+
+QString QrPlugin::generateCard(const QString& title, const QString& description, const QString& data)
+{
+    QJsonObject result = encodeMatrix(data);
+    if (result["ok"].toBool()) {
+        result["title"] = title;
+        result["description"] = description;
     }
-    m_lastJson = QString::fromUtf8(QJsonDocument(result).toJson(QJsonDocument::Compact));
+    m_lastJson = jsonOut(result);
     return m_lastJson;
 }
 

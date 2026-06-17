@@ -20,7 +20,7 @@ public:
     explicit QrPlugin(QObject* parent = nullptr);
 
     QString name()    const override { return QStringLiteral("qr"); }
-    QString version() const override { return QStringLiteral("0.1.0"); }
+    QString version() const override { return QStringLiteral("0.2.0"); }
 
     // Called by the shell via reflection — do NOT mark override.
     Q_INVOKABLE void initLogos(LogosAPI* api);
@@ -28,6 +28,11 @@ public:
     // Encode `text` to a QR. Returns JSON: {"ok":true,"n":<size>,"cells":[bool…(n*n, row-major)],"text":...}
     // or {"ok":false,"error":...}. Also stored as the "last generated" QR.
     Q_INVOKABLE QString generate(const QString& text);
+
+    // Encode `data` to a QR and bundle it with a title + description for an embeddable card.
+    // Returns {"ok":true,"title":...,"description":...,"n":...,"cells":[…]} or {"ok":false,"error":...}.
+    // Also stored as the "last generated". This is the entry point for the QR-card component.
+    Q_INVOKABLE QString generateCard(const QString& title, const QString& description, const QString& data);
 
     // The last generated QR (same JSON shape), or {"ok":false,"error":"none generated"}.
     Q_INVOKABLE QString getLast();
