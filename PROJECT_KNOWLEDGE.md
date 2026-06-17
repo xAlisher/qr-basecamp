@@ -58,3 +58,21 @@ Three hard-won rules (each cost a debug cycle — all now platform skills):
   while the core cold-spawns. Pure push (subscribe only) avoids it entirely.
 - Debugging: **`logoscore` headless** (`-c "chat_id_showcase.createIntroBundle()"`) reproduced
   the core crash in seconds and let me bisect emit-removed → direct-emit without GUI cycles.
+
+## QR as a service (the `qr` core)
+
+`qr-basecamp` is a **core + ui pair**: the `qr` **core** is the callable service, `qr_ui` its tab.
+- **`qr` core** (`src/QrPlugin.*` + vendored Nayuki MIT C++ encoder `src/qrcodegen.*`):
+  `Q_INVOKABLE generate(text)` → `{ok,n,cells[n*n],text}` (matrix), `getLast()`,
+  `savePng(srcPath,name)`. **Request/reply only — no event emit** (so no getClient-self crash).
+  Any module: `logos.callModule("qr","generate",[text])`.
+- **`qr_ui`** renders the matrix as a Grid (the core returns *data*, not an image — the sandbox
+  blocks `data:` URIs; skill `qml-render-generated-bitmap-rectangle-grid`).
+- **Save as image** (v0.7.0): `grabToImage` → `saveToFile("/tmp/…")` → `qr.savePng` validates +
+  moves to `~/Pictures/qr/`. File I/O is C++-only in the sandbox. (skill `qml-export-rendered-item-png`)
+- **Centering:** the white frame is a fixed-size `Layout.preferredWidth/Height` child and the
+  Grid uses `anchors.centerIn` — raw `width/height` on a Layout child is ignored and the QR
+  ended up top-left. (skill `qml-layout-child-no-raw-size`)
+
+This round applied the prior retro's lessons and ran clean: every core method
+(`generate`, `savePng`) was **logoscore-verified before** wiring the UI — no crash cycles.
